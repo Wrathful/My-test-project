@@ -1,0 +1,154 @@
+---
+networks:
+  default:
+  dev-proxy:
+    external: true
+
+volumes:
+  db-data:
+  rds-data:
+  elastic-data:
+
+services:
+  php:
+    build:
+      context: .
+      dockerfile: ./docker/images/php/Dockerfile.loc
+      args:
+        ENABLE_XDEBUG: ${ENABLE_XDEBUG:-true}
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    environment:
+      STAND: loc
+      PHP_IDE_CONFIG: serverName=${VIRTUAL_HOST}
+      APP_URL: http://${VIRTUAL_HOST}
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_USER: ${DB_USER:-root}
+      DB_PASS: ${DB_PASS:-tmp}
+      DB_NAME: ${DB_NAME:-laravel}
+      PG_HOST: ${PG_HOST:-postgre}
+      PG_PORT: ${PG_PORT:-5432}
+      PG_USER: ${PG_USER:-postgres}
+      PG_PASS: ${PG_PASS:-tmp}
+      PG_NAME: ${PG_NAME:-laravel}
+      ELASTIC_HOST: ${ELS_HOST:-elasticsearch}
+      ELASTIC_PORT: ${ELS_PORT:-9200}
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+    volumes:
+      - ./app:/var/www/html
+      - ./.git:/var/www/html/.git:ro
+    networks:
+      - default
+      - dev-proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dev-proxy"
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME}-php.rule=Host(`${VIRTUAL_HOST}`)"
+      - "traefik.http.services.${COMPOSE_PROJECT_NAME}-php.loadbalancer.server.port=80"
+    depends_on:
+      - db
+      - redis
+      - elasticsearch
+    restart: unless-stopped
+
+#  swoole:
+#    build:
+#      context: .
+#      dockerfile: ./docker/images/php/Dockerfile.loc
+#      args:
+#        ENABLE_XDEBUG: ${ENABLE_XDEBUG:-true}
+#    extra_hosts:
+#      - 'host.docker.internal:host-gateway'
+#    environment:
+#      STAND: loc
+#      APP_URL: http://${VIRTUAL_HOST}
+#      DB_HOST: ${DB_HOST:-db}
+#      DB_PORT: ${DB_PORT:-3306}
+#      DB_USER: ${DB_USER:-root}
+#      DB_PASS: ${DB_PASS:-tmp}
+#      DB_NAME: ${DB_NAME:-laravel}
+#      PG_HOST: ${PG_HOST:-postgre}
+#      PG_PORT: ${PG_PORT:-5432}
+#      PG_USER: ${PG_USER:-postgres}
+#      PG_PASS: ${PG_PASS:-tmp}
+#      PG_NAME: ${PG_NAME:-laravel}
+#      ELASTIC_HOST: ${ELS_HOST:-elasticsearch}
+#      ELASTIC_PORT: ${ELS_PORT:-9200}
+#      REDIS_HOST: ${REDIS_HOST:-redis}
+#      REDIS_PORT: ${REDIS_PORT:-6379}
+#    command: ["php", "artisan", "octane:start", "--host=0.0.0.0", "--workers=10"]
+#    volumes:
+#      - ./app:/var/www/html
+#      - ./.git:/var/www/html/.git:ro
+#    networks:
+#      - default
+#      - dev-proxy
+#    labels:
+#      - "traefik.enable=true"
+#      - "traefik.docker.network=dev-proxy"
+#      - "traefik.http.routers.${COMPOSE_PROJECT_NAME}-swoole.rule=Host(`swoole-${VIRTUAL_HOST}`)"
+#      - "traefik.http.services.${COMPOSE_PROJECT_NAME}-swoole.loadbalancer.server.port=8000"
+#    depends_on:
+#      - db
+#      - redis
+#      - elasticsearch
+#    restart: unless-stopped
+
+  db:
+    image: mariadb:12.1
+    environment:
+        MYSQL_ROOT_PASSWORD: ${DB_PASS:-tmp}
+        MYSQL_DATABASE: ${DB_NAME:-laravel}
+        MARIADB_AUTO_UPGRADE: 1
+    volumes:
+      - db-data:/var/lib/mysql
+      - ./docker/sql:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - rds-data:/data
+    restart: unless-stopped
+
+  pma:
+    image: phpmyadmin/phpmyadmin
+    depends_on:
+      - db
+    environment:
+      PMA_HOST: ${DB_HOST:-db}
+      PMA_USER: ${DB_USER:-root}
+      PMA_PASSWORD: ${DB_PASS:-tmp}
+      PMA_ARBITRARY: 0
+      UPLOAD_LIMIT: 1047527424
+    expose:
+      - 80
+    networks:
+      - default
+      - dev-proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dev-proxy"
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME}-pma.rule=Host(`pma-${VIRTUAL_HOST}`)"
+      - "traefik.http.services.${COMPOSE_PROJECT_NAME}-pma.loadbalancer.server.port=80"
+    restart: unless-stopped
+
+  elasticsearch:
+    image: elasticsearch:8.8.0
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "ES_HEAP_SIZE=512m"
+      - "http.host=0.0.0.0"
+      - "transport.host=127.0.0.1"
+      - "xpack.security.enabled=false"
+    volumes:
+      - elastic-data:/usr/share/elasticsearch/data
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    restart: unless-stopped

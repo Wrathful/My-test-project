@@ -1,0 +1,29 @@
+version: '3'
+
+networks:
+  default:
+  dev-proxy:
+    external: true
+
+services:
+  varnish:
+    build:
+      context: ./docker/images/varnish
+      dockerfile: Dockerfile
+    container_name: ${COMPOSE_PROJECT_NAME}-varnish
+    volumes:
+      - ./docker/images/varnish/laravel.vcl:/etc/varnish/default.vcl
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dev-proxy"
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME}-varnish.rule=Host(`varnish-${VIRTUAL_HOST}`)"
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME}-varnish.middlewares=traefik-compress"
+      - "traefik.http.services.${COMPOSE_PROJECT_NAME}-varnish.loadbalancer.server.port=80"
+      - "traefik.http.middlewares.traefik-compress.compress=true"
+    networks:
+      - default
+      - dev-proxy
+    environment:
+      VARNISHD_PARAMS: "-p http_max_hdr=1024 -p workspace_backend=1116000 -p workspace_client=1116000 -p http_req_hdr_len=1164000 -p http_req_size=1164000 -p http_resp_hdr_len=1164000 -p http_resp_size=1164000"
+      VARNISH_SIZE: 1G
+    restart: unless-stopped

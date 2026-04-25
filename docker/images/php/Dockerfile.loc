@@ -1,0 +1,98 @@
+FROM php:8.4.16-fpm-alpine3.23
+
+RUN addgroup -g 1000 webserver && adduser -G webserver -g webserver -s /bin/sh -D webserver
+
+RUN apk add --no-cache \
+        bash \
+        nano \
+        git \
+        freetype \
+        libpng \
+        libzip \
+        libwebp \
+        icu \
+        gmp \
+        patch \
+        libjpeg-turbo \
+        mysql-client
+
+RUN apk add --no-cache --virtual .build-deps \
+        $PHPIZE_DEPS \
+        freetype-dev \
+        libpng-dev \
+        libzip-dev \
+        libwebp-dev \
+        icu-dev \
+        gmp-dev \
+        libjpeg-turbo-dev \
+        zlib-dev && \
+    docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp && \
+    docker-php-ext-install -j$(nproc) \
+        bcmath \
+        bz2 \
+        exif \
+        gd \
+        gmp \
+        zip \
+        intl \
+        pdo_mysql \
+        opcache && \
+    pecl install --onlyreqdeps --configureoptions='enable-redis-igbinary="yes" enable-redis-lzf="yes"' \
+        igbinary \
+        redis && \
+    docker-php-ext-enable \
+        igbinary \
+        redis && \
+    apk del --no-network .build-deps
+
+RUN curl -L https://raw.githubusercontent.com/johanhaleby/bash-templater/master/templater.sh -o /usr/local/bin/templater && chmod +x /usr/local/bin/templater
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+RUN rm /usr/local/etc/php-fpm.d/zz-docker.conf
+
+ARG ENABLE_XDEBUG=true
+
+RUN apk add --no-cache \
+        nginx \
+        supervisor
+
+RUN apk add --no-cache --virtual .build-deps \
+        linux-headers \
+        brotli-dev \
+        openssl-dev \
+        $PHPIZE_DEPS && \
+    pecl install swoole && \
+    docker-php-ext-enable swoole && \
+    if [ "$ENABLE_XDEBUG" = "true" ]; then \
+      pecl install xdebug && docker-php-ext-enable xdebug; \
+    fi && \
+    docker-php-ext-install pcntl && \
+    apk del --no-network .build-deps
+
+COPY docker/images/php/configs/nginx.local.conf /etc/nginx/nginx.conf
+COPY docker/images/php/configs/www.conf /usr/local/etc/php-fpm.d/www.conf
+COPY docker/images/php/configs/php.ini /usr/local/etc/php/conf.d/custom.ini
+COPY docker/images/php/configs/xdebug.ini /tmp/xdebug.ini
+COPY docker/images/php/configs/supervisord.conf /etc/supervisord.conf
+COPY docker/images/php/configs/workers.conf /etc/worker.conf
+
+RUN if [ "$ENABLE_XDEBUG" = "true" ]; then \
+      mv /tmp/xdebug.ini /usr/local/etc/php/conf.d/docker-php-ext-xdebug-plus.ini; \
+    else \
+      rm -f /tmp/xdebug.ini; \
+    fi
+
+RUN chown -R webserver:webserver /var/www/html && \
+    chown -R webserver:webserver /run && \
+    chown -R webserver:webserver /var/lib/nginx && \
+    chown -R webserver:webserver /var/log/nginx
+
+COPY --chown=webserver:webserver docker/images/php/configs/start.sh /run/start.sh
+RUN chmod +x /run/start.sh
+
+USER webserver
+
+EXPOSE 80
+
+CMD ["/run/start.sh"]

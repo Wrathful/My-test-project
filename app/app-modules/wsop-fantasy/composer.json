@@ -1,0 +1,24 @@
+{
+	"name": "modules/wsop-fantasy",
+	"description": "",
+	"type": "library",
+	"version": "1.0",
+	"license": "proprietary",
+	"require": {},
+	"autoload": {
+		"psr-4": {
+			"Modules\\WsopFantasy\\": "src/",
+			"Modules\\WsopFantasy\\Tests\\": "tests/",
+			"Modules\\WsopFantasy\\Database\\Factories\\": "database/factories/",
+			"Modules\\WsopFantasy\\Database\\Seeders\\": "database/seeders/"
+		}
+	},
+	"minimum-stability": "stable",
+	"extra": {
+		"laravel": {
+			"providers": [
+				"Modules\\WsopFantasy\\Providers\\WsopFantasyServiceProvider"
+			]
+		}
+	}
+}

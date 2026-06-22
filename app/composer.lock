@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "98c9128cc1fd7a8b1ad2fc3133b3c6bf",
+    "content-hash": "d6d0349d74700b2461b3c635d3c3937c",
     "packages": [
         {
             "name": "brick/math",
@@ -3050,6 +3050,38 @@
                 "source": "https://github.com/marc-mabe/php-enum/tree/v4.7.2"
             },
             "time": "2025-09-14T11:18:39+00:00"
+        },
+        {
+            "name": "modules/wsop-fantasy",
+            "version": "1.0",
+            "dist": {
+                "type": "path",
+                "url": "app-modules/wsop-fantasy",
+                "reference": "323b53b3c0456884ce90830ca26ebea2cdbdd07c"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Modules\\WsopFantasy\\Providers\\WsopFantasyServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Modules\\WsopFantasy\\": "src/",
+                    "Modules\\WsopFantasy\\Tests\\": "tests/",
+                    "Modules\\WsopFantasy\\Database\\Factories\\": "database/factories/",
+                    "Modules\\WsopFantasy\\Database\\Seeders\\": "database/seeders/"
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
         },
         {
             "name": "monolog/monolog",

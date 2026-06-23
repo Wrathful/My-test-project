@@ -6,6 +6,7 @@ networks:
 
 volumes:
   db-data:
+  pg-data:
   rds-data:
   elastic-data:
 
@@ -96,6 +97,20 @@ services:
 #      - elasticsearch
 #    restart: unless-stopped
 
+  postgres:
+      image: postgres:16-alpine
+      security_opt:
+          - no-new-privileges:true
+      tmpfs:
+          - /tmp
+          - /var/run/postgresql
+      volumes:
+          - pg-data:/var/lib/postgresql/data
+      environment:
+          POSTGRES_PASSWORD: ${PG_PASS:-tmp}
+          POSTGRES_DB: ${PG_DBNAME:-laravel}
+      restart: unless-stopped
+
   db:
     image: mariadb:12.1
     environment:
@@ -106,6 +121,7 @@ services:
       - db-data:/var/lib/mysql
       - ./docker/sql:/docker-entrypoint-initdb.d
     restart: unless-stopped
+
 
   redis:
     image: redis:7-alpine
@@ -152,3 +168,57 @@ services:
         soft: -1
         hard: -1
     restart: unless-stopped
+
+    # ---------- RabbitMQ ----------
+  rabbitmq:
+      image: rabbitmq:3-management
+      container_name: rabbitmq
+      hostname: rabbitmq-${VIRTUAL_HOST}   # опционально, имя внутри контейнера
+      environment:
+          RABBITMQ_DEFAULT_USER: admin
+          RABBITMQ_DEFAULT_PASS: password
+      volumes:
+          - ./docker/rabbitmq_data:/var/lib/rabbitmq   # сохраняем данные локально
+      networks:
+          default:
+              aliases:
+                  - rabbitmq-${VIRTUAL_HOST}   # чтобы контейнеры в сети видели его по этому имени
+          dev-proxy:                       # подключаем к сети Traefik
+      labels:
+          - "traefik.enable=true"
+          - "traefik.docker.network=dev-proxy"
+          # Веб-интерфейс (порт 15672)
+          - "traefik.http.routers.${COMPOSE_PROJECT_NAME}-rabbitmq.rule=Host(`rabbitmq-${VIRTUAL_HOST}`)"
+          - "traefik.http.services.${COMPOSE_PROJECT_NAME}-rabbitmq.loadbalancer.server.port=15672"
+      restart: unless-stopped
+
+    # ---------- Kafka (KRaft) ----------
+  kafka:
+      image: apache/kafka:latest
+      container_name: kafka
+      hostname: kafka-${VIRTUAL_HOST}    # опционально
+      ports:
+          - "9092:9092"                     # проброс на хост (опционально, см. пояснение ниже)
+      environment:
+          # Настройки KRaft (без ZooKeeper)
+          KAFKA_NODE_ID: 1
+          KAFKA_PROCESS_ROLES: broker,controller
+          KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+          KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+          # !!! Важно: рекламируемый адрес, который увидят клиенты
+          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-${VIRTUAL_HOST}:9092
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+          KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+          KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+          KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+          KAFKA_LOG_DIRS: /var/lib/kafka/data
+          KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      volumes:
+          - ./docker/kafka_data:/var/lib/kafka/data   # сохраняем данные
+      networks:
+          default:
+              aliases:
+                  - kafka-${VIRTUAL_HOST}   # чтобы контейнеры в сети видели его по этому имени
+          dev-proxy:                     # подключаем к сети Traefik (хотя для Kafka HTTP не нужен)
+      restart: unless-stopped

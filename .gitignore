@@ -19,3 +19,9 @@ yarn-error.log
 docker/sql/*
 !docker/sql/.gitkeep
 !docker/sql/testing.sql
+
+.kilo/*
+.kilocode/*
+.codex
+
+/another_source/

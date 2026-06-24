@@ -28,7 +28,7 @@ services:
       DB_USER: ${DB_USER:-root}
       DB_PASS: ${DB_PASS:-tmp}
       DB_NAME: ${DB_NAME:-laravel}
-      PG_HOST: ${PG_HOST:-postgre}
+      PG_HOST: ${PG_HOST:-postgres}
       PG_PORT: ${PG_PORT:-5432}
       PG_USER: ${PG_USER:-postgres}
       PG_PASS: ${PG_PASS:-tmp}
@@ -70,7 +70,7 @@ services:
 #      DB_USER: ${DB_USER:-root}
 #      DB_PASS: ${DB_PASS:-tmp}
 #      DB_NAME: ${DB_NAME:-laravel}
-#      PG_HOST: ${PG_HOST:-postgre}
+#      PG_HOST: ${PG_HOST:-postgres}
 #      PG_PORT: ${PG_PORT:-5432}
 #      PG_USER: ${PG_USER:-postgres}
 #      PG_PASS: ${PG_PASS:-tmp}

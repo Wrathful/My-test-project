@@ -65,6 +65,7 @@ RUN apk add --no-cache --virtual .build-deps \
     pecl install swoole && \
     docker-php-ext-enable swoole && \
     docker-php-ext-install sockets && \
+    docker-php-ext-enable sockets && \
     if [ "$ENABLE_XDEBUG" = "true" ]; then \
       pecl install xdebug && docker-php-ext-enable xdebug; \
     fi && \

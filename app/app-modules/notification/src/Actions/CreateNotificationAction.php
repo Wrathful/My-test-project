@@ -6,6 +6,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use Modules\Notification\Enums\NotificationRecipientStatus;
 use Modules\Notification\Models\Notification;
 use Modules\Notification\Models\NotificationRecipient;
 use Modules\Notification\Jobs\SendNotificationJob;
@@ -50,12 +51,12 @@ class CreateNotificationAction
             ]);
 
             foreach ($validated['recipients'] as $recipientId) {
-                NotificationRecipient::create([
-                    'notification_id' => $notification->id,
-                    'recipient_id' => $recipientId,
-                    'status' => 'pending',
-                ]);
-            }
+                 NotificationRecipient::create([
+                     'notification_id' => $notification->id,
+                     'recipient_id' => $recipientId,
+                     'status' => NotificationRecipientStatus::PENDING,
+                 ]);
+             }
 
             DB::commit();
 
@@ -71,7 +72,7 @@ class CreateNotificationAction
         // Dispatch a job for each recipient
         foreach ($notification->recipients as $recipient) {
             $priority = $isTransactional ? 10 : 1;
-
+            //Свойство приоритет передается в RabbitMQ, благодаря чему эти нотификации оказываются впереди.
             SendNotificationJob::dispatch($notification->id, $recipient->id, $priority)
                 ->onQueue('notifications');
         }

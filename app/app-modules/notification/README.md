@@ -14,8 +14,9 @@
 
 - PHP 8.3+
 - Laravel 13.x
-- MySQL/PostgreSQL
-- Redis (для очередей и кэша)
+- PostgreSQL
+- RabbitMQ
+- Redis (для кэша)
 
 ## Установка
 
@@ -153,8 +154,8 @@ docker-compose exec php php artisan test --filter=NotificationTest
 
 ```
 ┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│   API Request   │────▶│  Notification    │────▶│   Redis Queue   │
-│  (POST /api/v1) │     │   Controller     │     │  (high/low)     │
+│   API Request   │────▶│  Notification    │────▶│  RabbitMQ Queue │
+│  (POST /api/v1) │     │   Controller     │     │ (priority 1/10) │
 └─────────────────┘     └──────────────────┘     └─────────────────┘
                                                            │
                                                            ▼

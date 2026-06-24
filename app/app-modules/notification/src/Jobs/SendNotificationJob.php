@@ -8,6 +8,8 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redis;
+use Modules\Notification\Enums\NotificationRecipientStatus;
 use Modules\Notification\Models\Notification;
 use Modules\Notification\Models\NotificationRecipient;
 use Modules\Notification\Services\Gateway\GatewayFactory;
@@ -52,11 +54,36 @@ class SendNotificationJob implements ShouldQueue
         }
 
         // Idempotency check: if already processed, skip
-        if ($recipient->status !== 'pending') {
+        if ($recipient->status !== NotificationRecipientStatus::PENDING) {
             Log::info("Recipient already processed, skipping", [
                 'recipient_id' => $this->recipientId,
-                'status' => $recipient->status,
+                'status' => $recipient->status->value,
             ]);
+            return;
+        }
+
+        // Rate limiting: limit to 10 messages per recipient per minute
+        $rateLimitKey = "rate_limit:recipient:{$recipient->recipient_id}";
+        $maxAttempts = 10;
+        $ttl = 60; // 60 seconds
+
+        $attempts = Redis::incr($rateLimitKey);
+        if ($attempts === 1) {
+            Redis::expire($rateLimitKey, $ttl);
+        }
+
+        if ($attempts > $maxAttempts) {
+            Log::warning("Rate limit exceeded for recipient", [
+                'recipient_id' => $recipient->recipient_id,
+                'attempts' => $attempts,
+                'limit' => $maxAttempts,
+            ]);
+
+            // Mark as failed due to rate limiting
+            $recipient->status = NotificationRecipientStatus::FAILED;
+            $recipient->completed_at = now();
+            $recipient->save();
+
             return;
         }
 
@@ -75,7 +102,7 @@ class SendNotificationJob implements ShouldQueue
         ]);
 
         if ($result['success']) {
-            $recipient->status = 'sent';
+            $recipient->status = NotificationRecipientStatus::SENT;
             $recipient->completed_at = now();
             $recipient->save();
 
@@ -88,7 +115,7 @@ class SendNotificationJob implements ShouldQueue
                 // Re-throw to trigger retry
                 throw new \RuntimeException("Temporary failure: ".$result['message']);
             } else {
-                $recipient->status = 'failed';
+                $recipient->status = NotificationRecipientStatus::FAILED;
                 $recipient->completed_at = now();
                 $recipient->save();
 

@@ -24,6 +24,11 @@ return new class extends Migration
             $table->timestamp('last_attempt_at')->nullable();
             $table->timestamp('completed_at')->nullable();
             $table->timestamps();
+
+            //Для ускорения различных запросов можно настроить индексы
+            $table->index(['recipient_id']);
+            $table->index(['status']);
+            $table->index(['notification_id', 'status']);
         });
     }
 

@@ -5,6 +5,7 @@ namespace Modules\Notification\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Modules\Notification\Enums\NotificationRecipientStatus;
 
 class NotificationRecipient extends Model
 {
@@ -18,7 +19,7 @@ class NotificationRecipient extends Model
     ];
 
     protected $casts = [
-        'status' => 'string',
+        'status' => NotificationRecipientStatus::class,
         'attempts' => 'integer',
         'last_attempt_at' => 'datetime',
         'completed_at' => 'datetime',

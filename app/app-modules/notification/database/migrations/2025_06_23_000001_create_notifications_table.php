@@ -16,6 +16,7 @@ return new class extends Migration
             $table->enum('channel', ['sms', 'email']);
             $table->text('message_text');
             $table->uuid('request_id')->unique();
+            $table->boolean('is_transactional')->default(false);
             $table->timestamps();
         });
     }

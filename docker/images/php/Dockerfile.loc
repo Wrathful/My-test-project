@@ -10,6 +10,7 @@ RUN apk add --no-cache \
         libpng \
         libzip \
         libwebp \
+        libpq \
         icu \
         gmp \
         patch \
@@ -61,6 +62,7 @@ RUN apk add --no-cache --virtual .build-deps \
         linux-headers \
         brotli-dev \
         openssl-dev \
+        libpq-dev \
         $PHPIZE_DEPS && \
     pecl install swoole && \
     docker-php-ext-enable swoole && \
@@ -70,6 +72,7 @@ RUN apk add --no-cache --virtual .build-deps \
       pecl install xdebug && docker-php-ext-enable xdebug; \
     fi && \
     docker-php-ext-install pcntl && \
+    docker-php-ext-install pdo_pgsql && \
     apk del --no-network .build-deps
 
 COPY docker/images/php/configs/nginx.local.conf /etc/nginx/nginx.conf

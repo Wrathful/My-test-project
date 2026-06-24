@@ -1,0 +1,167 @@
+openapi: 3.0.0
+info:
+  title: Notification Service API
+  description: Микросервис уведомлений для массовой рассылки SMS и Email сообщений
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+
+paths:
+  /api/v1/notifications:
+    post:
+      summary: Создание массовой рассылки уведомлений
+      description: Отправка уведомлений на указанные получатели через выбранный канал (SMS или Email)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - channel
+                - message
+                - recipients
+              properties:
+                channel:
+                  type: string
+                  enum:
+                    - sms
+                    - email
+                  description: Канал отправки уведомления
+                  example: sms
+                message:
+                  type: string
+                  description: Текст сообщения
+                  example: "Your OTP is 1234"
+                recipients:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: string
+                  description: Массив получателей (телефонные номера или email)
+                  example: ["+1234567890", "user@example.com"]
+                request_id:
+                  type: string
+                  format: uuid
+                  description: UUID для идемпотентности (предотвращает дублирование)
+                  example: "550e8400-e29b-41d4-a716-446655440000"
+                is_transactional:
+                  type: boolean
+                  default: false
+                  description: Флаг транзакционного уведомления (высокий приоритет)
+                  example: true
+      responses:
+        '202':
+          description: Уведомление принято и поставлено в очередь
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notification_id:
+                    type: integer
+                    description: ID созданного уведомления
+                    example: 1
+                  status:
+                    type: string
+                    example: "accepted"
+                  message:
+                    type: string
+                    example: "Notification queued for processing"
+        '200':
+          description: Дубликат запроса (идемпотентность)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notification_id:
+                    type: integer
+                  status:
+                    type: string
+                    example: "duplicate"
+                  message:
+                    type: string
+                    example: "Notification with this request_id was already processed."
+        '422':
+          description: Ошибка валидации
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  errors:
+                    type: object
+
+  /api/v1/notifications/subscriber/{subscriberId}:
+    get:
+      summary: Получение истории уведомлений подписчика
+      description: Возвращает список уведомлений для конкретного получателя
+      parameters:
+        - name: subscriberId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Идентификатор подписчика (телефон или email)
+          example: "+1234567890"
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+          description: Количество записей
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Смещение
+      responses:
+        '200':
+          description: Список уведомлений
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    notification_id:
+                      type: integer
+                    channel:
+                      type: string
+                      enum:
+                        - sms
+                        - email
+                    message:
+                      type: string
+                    recipient_id:
+                      type: string
+                    status:
+                      type: string
+                      enum:
+                        - pending
+                        - sent
+                        - delivered
+                        - failed
+                    created_at:
+                      type: string
+                      format: date-time
+                    updated_at:
+                      type: string
+                      format: date-time
+
+components:
+  schemas:
+    NotificationStatus:
+      type: string
+      enum:
+        - pending
+        - sent
+        - delivered
+        - failed

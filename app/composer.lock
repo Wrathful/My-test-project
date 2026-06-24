@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "98c9128cc1fd7a8b1ad2fc3133b3c6bf",
+    "content-hash": "8c32c23ad006409fc93dd2bb2c9be761",
     "packages": [
         {
             "name": "brick/math",
@@ -3050,6 +3050,38 @@
                 "source": "https://github.com/marc-mabe/php-enum/tree/v4.7.2"
             },
             "time": "2025-09-14T11:18:39+00:00"
+        },
+        {
+            "name": "modules/notification",
+            "version": "1.0",
+            "dist": {
+                "type": "path",
+                "url": "app-modules/notification",
+                "reference": "270b6f3f303d999234ee951fcdb9282768ec16f5"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Modules\\Notification\\Providers\\NotificationServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Modules\\Notification\\": "src/",
+                    "Modules\\Notification\\Tests\\": "tests/",
+                    "Modules\\Notification\\Database\\Factories\\": "database/factories/",
+                    "Modules\\Notification\\Database\\Seeders\\": "database/seeders/"
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
         },
         {
             "name": "monolog/monolog",

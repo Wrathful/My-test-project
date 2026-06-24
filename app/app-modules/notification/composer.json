@@ -1,0 +1,24 @@
+{
+	"name": "modules/notification",
+	"description": "",
+	"type": "library",
+	"version": "1.0",
+	"license": "proprietary",
+	"require": {},
+	"autoload": {
+		"psr-4": {
+			"Modules\\Notification\\": "src/",
+			"Modules\\Notification\\Tests\\": "tests/",
+			"Modules\\Notification\\Database\\Factories\\": "database/factories/",
+			"Modules\\Notification\\Database\\Seeders\\": "database/seeders/"
+		}
+	},
+	"minimum-stability": "stable",
+	"extra": {
+		"laravel": {
+			"providers": [
+				"Modules\\Notification\\Providers\\NotificationServiceProvider"
+			]
+		}
+	}
+}

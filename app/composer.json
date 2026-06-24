@@ -14,7 +14,8 @@
         "internachi/modular": "^3.0",
         "laravel/framework": "^13.0",
         "laravel/scout": "^11.1",
-        "laravel/tinker": "^3.0"
+        "laravel/tinker": "^3.0",
+        "modules/notification": "*"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

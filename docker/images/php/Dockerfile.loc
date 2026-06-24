@@ -1,7 +1,5 @@
 FROM php:8.4.16-fpm-alpine3.23
 
-RUN docker-php-ext-install sockets
-
 RUN addgroup -g 1000 webserver && adduser -G webserver -g webserver -s /bin/sh -D webserver
 
 RUN apk add --no-cache \

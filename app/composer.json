@@ -15,7 +15,8 @@
         "laravel/framework": "^13.0",
         "laravel/scout": "^11.1",
         "laravel/tinker": "^3.0",
-        "modules/notification": "*"
+        "modules/notification": "*",
+        "vladimir-yuldashev/laravel-queue-rabbitmq": "^1.0",
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

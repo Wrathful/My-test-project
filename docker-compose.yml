@@ -222,3 +222,43 @@ services:
                   - kafka-${VIRTUAL_HOST}   # чтобы контейнеры в сети видели его по этому имени
           dev-proxy:                     # подключаем к сети Traefik (хотя для Kafka HTTP не нужен)
       restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: ./docker/images/php/Dockerfile.loc
+      args:
+        ENABLE_XDEBUG: ${ENABLE_XDEBUG:-true}
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    environment:
+      STAND: loc
+      PHP_IDE_CONFIG: serverName=${VIRTUAL_HOST}
+      APP_URL: http://${VIRTUAL_HOST}
+      DB_HOST: ${DB_HOST:-postgre}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASS: ${DB_PASS:-tmp}
+      DB_NAME: ${DB_NAME:-laravel}
+      PG_HOST: ${PG_HOST:-postgre}
+      PG_PORT: ${PG_PORT:-5432}
+      PG_USER: ${PG_USER:-postgres}
+      PG_PASS: ${PG_PASS:-tmp}
+      PG_NAME: ${PG_NAME:-laravel}
+      ELASTIC_HOST: ${ELS_HOST:-elasticsearch}
+      ELASTIC_PORT: ${ELS_PORT:-9200}
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+    volumes:
+      - ./app:/var/www/html
+      - ./.git:/var/www/html/.git:ro
+    networks:
+      - default
+      - dev-proxy
+    command: ["php", "artisan", "queue:work", "--queue=notifications-high,notifications-low", "--sleep=3", "--tries=3"]
+    depends_on:
+      - db
+      - redis
+      - postgres
+      - rabbitmq
+    restart: unless-stopped

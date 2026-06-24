@@ -70,10 +70,10 @@ class CreateNotificationAction
 
         // Dispatch a job for each recipient
         foreach ($notification->recipients as $recipient) {
-            $queue = $isTransactional ? 'notifications-high' : 'notifications-low';
+            $priority = $isTransactional ? 10 : 1;
 
-            SendNotificationJob::dispatch($notification->id, $recipient->id)
-                ->onQueue($queue);
+            SendNotificationJob::dispatch($notification->id, $recipient->id, $priority)
+                ->onQueue('notifications');
         }
 
         return [

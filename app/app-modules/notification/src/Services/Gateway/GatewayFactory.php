@@ -16,8 +16,8 @@ class GatewayFactory
     public function create(string $channel): GatewayInterface
     {
         return match ($channel) {
-            'sms' => new SmsGateway(),
-            'email' => new EmailGateway(),
+            'sms' => \app(SmsGateway::class),
+            'email' => \app(EmailGateway::class),
             default => throw new InvalidArgumentException("Unknown channel: {$channel}"),
         };
     }

@@ -14,7 +14,10 @@ return new class extends Migration
         Schema::create('notification_recipients', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('notification_id');
-            $table->foreign('notification_id')->references('id')->on('notifications')->onDelete('cascade');
+            $table->foreign('notification_id')
+                ->references('id')
+                ->on('notifications')
+                ->onDelete('cascade');
             $table->string('recipient_id'); // phone number or email
             $table->enum('status', ['pending', 'sent', 'delivered', 'failed'])->default('pending');
             $table->integer('attempts')->default(0);

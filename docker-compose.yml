@@ -28,7 +28,7 @@ services:
       DB_USER: ${DB_USER:-root}
       DB_PASS: ${DB_PASS:-tmp}
       DB_NAME: ${DB_NAME:-laravel}
-      PG_HOST: ${PG_HOST:-postgre}
+      PG_HOST: ${PG_HOST:-postgres}
       PG_PORT: ${PG_PORT:-5432}
       PG_USER: ${PG_USER:-postgres}
       PG_PASS: ${PG_PASS:-tmp}
@@ -110,6 +110,24 @@ services:
           POSTGRES_PASSWORD: ${PG_PASS:-tmp}
           POSTGRES_DB: ${PG_DBNAME:-laravel}
       restart: unless-stopped
+
+  pgadmin:
+      image: dpage/pgadmin4
+      depends_on:
+          - db
+      environment:
+          PGADMIN_DEFAULT_EMAIL: "pga@astrio.net"
+          PGADMIN_DEFAULT_PASSWORD: "admin123"
+      networks:
+          - default
+          - dev-proxy
+      labels:
+          - "traefik.enable=true"
+          - "traefik.docker.network=dev-proxy"
+          - "traefik.http.routers.${COMPOSE_PROJECT_NAME}-pga.rule=Host(`pga-${VIRTUAL_HOST}`)"
+          - "traefik.http.services.${COMPOSE_PROJECT_NAME}-pga.loadbalancer.server.port=5050"
+      restart: unless-stopped
+
 
   db:
     image: mariadb:12.1
@@ -240,7 +258,7 @@ services:
       DB_USER: ${DB_USER:-postgres}
       DB_PASS: ${DB_PASS:-tmp}
       DB_NAME: ${DB_NAME:-laravel}
-      PG_HOST: ${PG_HOST:-postgre}
+      PG_HOST: ${PG_HOST:-postgres}
       PG_PORT: ${PG_PORT:-5432}
       PG_USER: ${PG_USER:-postgres}
       PG_PASS: ${PG_PASS:-tmp}
@@ -255,7 +273,7 @@ services:
     networks:
       - default
       - dev-proxy
-    command: ["php", "artisan", "queue:work", "--queue=notifications-high,notifications-low", "--sleep=3", "--tries=3"]
+    command: ["php", "artisan", "queue:work", "--queue=notifications", "--sleep=3", "--tries=3"]
     depends_on:
       - db
       - redis

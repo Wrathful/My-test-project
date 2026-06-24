@@ -85,6 +85,14 @@ return [
                 ],
             ],
             'queue' => env('RABBITMQ_QUEUE', 'notifications'),
+            'options' => [
+                'queue' => [
+                    // Включаем приоритет для отложенных заданий
+                    'prioritize_delayed' => true,
+                    // Максимальный уровень приоритета (рекомендуется 1–10)
+                    'queue_max_priority' => 10,
+                ],
+            ],
         ],
 
         'deferred' => [

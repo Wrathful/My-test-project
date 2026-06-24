@@ -31,7 +31,8 @@ class SendNotificationJob implements ShouldQueue
      */
     public function __construct(
         public int $notificationId,
-        public int $recipientId
+        public int $recipientId,
+        public int $priority = 10,
     ) {}
 
     /**

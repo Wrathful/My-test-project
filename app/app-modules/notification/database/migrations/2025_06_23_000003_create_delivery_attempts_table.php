@@ -13,8 +13,11 @@ return new class extends Migration
     {
         Schema::create('delivery_attempts', function (Blueprint $table) {
             $table->id();
-            $table->bigInteger('notification_recipient_id')->unsigned();
-            $table->foreign('notification_recipient_id')->references('id')->on('notification_recipients')->onDelete('cascade');
+            $table->unsignedBigInteger('notification_recipient_id');
+            $table->foreign('notification_recipient_id')
+                ->references('id')
+                ->on('notification_recipients')
+                ->onDelete('cascade');
             $table->integer('attempt_number');
             $table->text('provider_response')->nullable();
             $table->timestamps();

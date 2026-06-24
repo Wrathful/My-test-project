@@ -11,7 +11,7 @@ class GatewayFactoryTest extends TestCase
 {
     public function testCreateSmsGateway(): void
     {
-        $factory = new GatewayFactory();
+        $factory = \app(GatewayFactory::class);
         $gateway = $factory->create('sms');
 
         $this->assertInstanceOf(SmsGateway::class, $gateway);

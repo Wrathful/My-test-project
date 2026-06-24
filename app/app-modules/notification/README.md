@@ -110,8 +110,8 @@ docker-compose exec php php artisan migrate
 
 Система поддерживает два уровня приоритета:
 
-- **Транзакционные уведомления** (`is_transactional: true`) - отправляются в очередь `notifications-high` с высоким приоритетом
-- **Маркетинговые уведомления** (`is_transactional: false` или не указано) - отправляются в очередь `notifications-low`
+- **Транзакционные уведомления** (`is_transactional: true`) - отправляются в очередь `notifications` с высоким приоритетом
+- **Маркетинговые уведомления** (`is_transactional: false` или не указано) - отправляются в очередь `notifications`
 
 ## Запуск в Docker
 
@@ -129,14 +129,8 @@ docker-compose up -d
 Для обработки очередей уведомлений:
 
 ```bash
-# Обработка высокоприоритетных уведомлений
-docker-compose exec php php artisan queue:work --queue=notifications-high --tries=3
-
-# Обработка обычных уведомлений
-docker-compose exec php php artisan queue:work --queue=notifications-low --tries=3
-
 # Обработка всех очередей
-docker-compose exec php php artisan queue:work --queue=notifications-high,notifications-low --tries=3
+docker-compose exec php php artisan queue:work --queue=notifications --tries=3
 ```
 
 ## Тестирование

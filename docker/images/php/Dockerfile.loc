@@ -75,6 +75,17 @@ RUN apk add --no-cache --virtual .build-deps \
     docker-php-ext-install pdo_pgsql && \
     apk del --no-network .build-deps
 
+# Добавляем расширения для Kafka и RabbitMQ
+RUN apk add --no-cache --virtual .build-deps \
+        librdkafka-dev \
+        rabbitmq-c-dev \
+        $PHPIZE_DEPS && \
+    pecl install rdkafka && \
+    docker-php-ext-enable rdkafka && \
+    pecl install amqp && \
+    docker-php-ext-enable amqp && \
+    apk del --no-network .build-deps
+
 COPY docker/images/php/configs/nginx.local.conf /etc/nginx/nginx.conf
 COPY docker/images/php/configs/www.conf /usr/local/etc/php-fpm.d/www.conf
 COPY docker/images/php/configs/php.ini /usr/local/etc/php/conf.d/custom.ini

@@ -6,9 +6,12 @@ networks:
 
 volumes:
   db-data:
+  kafka-data:
+  rabbitmq-data:
   pg-data:
   rds-data:
   elastic-data:
+  clickhouse-data:
 
 services:
   php:
@@ -27,16 +30,26 @@ services:
       DB_PORT: ${DB_PORT:-3306}
       DB_USER: ${DB_USER:-root}
       DB_PASS: ${DB_PASS:-tmp}
-      DB_NAME: ${DB_NAME:-laravel}
+      DB_NAME: ${DB_NAME:-my_project}
       PG_HOST: ${PG_HOST:-postgres}
       PG_PORT: ${PG_PORT:-5432}
       PG_USER: ${PG_USER:-postgres}
       PG_PASS: ${PG_PASS:-tmp}
-      PG_NAME: ${PG_NAME:-laravel}
+      PG_NAME: ${PG_NAME:-my_project}
       ELASTIC_HOST: ${ELS_HOST:-elasticsearch}
       ELASTIC_PORT: ${ELS_PORT:-9200}
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
+      CLICKHOUSE_HOST: clickhouse-${VIRTUAL_HOST}
+      CLICKHOUSE_PORT: 8123
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-default}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-}
+      KAFKA_BROKER: kafka-${VIRTUAL_HOST}:9092
+      RABBITMQ_HOST: rabbitmq-${VIRTUAL_HOST}
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: admin
+      RABBITMQ_PASS: password
     volumes:
       - ./app:/var/www/html
       - ./.git:/var/www/html/.git:ro
@@ -69,12 +82,12 @@ services:
 #      DB_PORT: ${DB_PORT:-3306}
 #      DB_USER: ${DB_USER:-root}
 #      DB_PASS: ${DB_PASS:-tmp}
-#      DB_NAME: ${DB_NAME:-laravel}
+#      DB_NAME: ${DB_NAME:-my_project}
 #      PG_HOST: ${PG_HOST:-postgres}
 #      PG_PORT: ${PG_PORT:-5432}
 #      PG_USER: ${PG_USER:-postgres}
 #      PG_PASS: ${PG_PASS:-tmp}
-#      PG_NAME: ${PG_NAME:-laravel}
+#      PG_NAME: ${PG_NAME:-my_project}
 #      ELASTIC_HOST: ${ELS_HOST:-elasticsearch}
 #      ELASTIC_PORT: ${ELS_PORT:-9200}
 #      REDIS_HOST: ${REDIS_HOST:-redis}
@@ -108,14 +121,31 @@ services:
           - pg-data:/var/lib/postgresql/data
       environment:
           POSTGRES_PASSWORD: ${PG_PASS:-tmp}
-          POSTGRES_DB: ${PG_DBNAME:-laravel}
+          POSTGRES_DB: ${PG_DBNAME:-my_project}
+      restart: unless-stopped
+
+  pgadmin:
+      image: dpage/pgadmin4
+      depends_on:
+          - postgres
+      environment:
+          PGADMIN_DEFAULT_EMAIL: "admin@admin.com"
+          PGADMIN_DEFAULT_PASSWORD: "admin123"
+      networks:
+          - default
+          - dev-proxy
+      labels:
+          - "traefik.enable=true"
+          - "traefik.docker.network=dev-proxy"
+          - "traefik.http.routers.${COMPOSE_PROJECT_NAME}-pga.rule=Host(`pga-${VIRTUAL_HOST}`)"
+          - "traefik.http.services.${COMPOSE_PROJECT_NAME}-pga.loadbalancer.server.port=80"
       restart: unless-stopped
 
   db:
     image: mariadb:12.1
     environment:
         MYSQL_ROOT_PASSWORD: ${DB_PASS:-tmp}
-        MYSQL_DATABASE: ${DB_NAME:-laravel}
+        MYSQL_DATABASE: ${DB_NAME:-my_project}
         MARIADB_AUTO_UPGRADE: 1
     volumes:
       - db-data:/var/lib/mysql
@@ -172,13 +202,12 @@ services:
     # ---------- RabbitMQ ----------
   rabbitmq:
       image: rabbitmq:3-management
-      container_name: rabbitmq
       hostname: rabbitmq-${VIRTUAL_HOST}   # опционально, имя внутри контейнера
       environment:
           RABBITMQ_DEFAULT_USER: admin
           RABBITMQ_DEFAULT_PASS: password
       volumes:
-          - ./docker/rabbitmq_data:/var/lib/rabbitmq   # сохраняем данные локально
+          - rabbitmq-data:/var/lib/rabbitmq   # сохраняем данные локально
       networks:
           default:
               aliases:
@@ -195,7 +224,6 @@ services:
     # ---------- Kafka (KRaft) ----------
   kafka:
       image: apache/kafka:latest
-      container_name: kafka
       hostname: kafka-${VIRTUAL_HOST}    # опционально
       ports:
           - "9092:9092"                     # проброс на хост (опционально, см. пояснение ниже)
@@ -215,10 +243,46 @@ services:
           KAFKA_LOG_DIRS: /var/lib/kafka/data
           KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       volumes:
-          - ./docker/kafka_data:/var/lib/kafka/data   # сохраняем данные
+          - kafka-data:/var/lib/kafka/data   # сохраняем данные
       networks:
           default:
               aliases:
                   - kafka-${VIRTUAL_HOST}   # чтобы контейнеры в сети видели его по этому имени
           dev-proxy:                     # подключаем к сети Traefik (хотя для Kafka HTTP не нужен)
+      restart: unless-stopped
+
+  kafdrop:
+      image: obsidiandynamics/kafdrop:latest
+      environment:
+          KAFKA_BROKERCONNECT: kafka-${VIRTUAL_HOST}:9092   # имя брокера из сети
+          JVM_OPTS: "-Xms32M -Xmx64M"
+          SERVER_SERVLET_CONTEXTPATH: "/"                    # корневой путь
+      networks:
+          - default
+          - dev-proxy
+      labels:
+          - "traefik.enable=true"
+          - "traefik.docker.network=dev-proxy"
+          - "traefik.http.routers.${COMPOSE_PROJECT_NAME}-kafdrop.rule=Host(`kafka-${VIRTUAL_HOST}`)"
+          - "traefik.http.services.${COMPOSE_PROJECT_NAME}-kafdrop.loadbalancer.server.port=9000"
+      depends_on:
+          - kafka
+      restart: unless-stopped
+
+    # ---------- ClickHouse ----------
+  clickhouse:
+      image: clickhouse/clickhouse-server:latest
+      hostname: clickhouse-${VIRTUAL_HOST}
+      environment:
+          CLICKHOUSE_DB: ${CLICKHOUSE_DB:-my_project}
+          CLICKHOUSE_USER: ${CLICKHOUSE_USER:-admin}
+          CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-tmp}
+          CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+      volumes:
+          - clickhouse-data:/var/lib/clickhouse
+      networks:
+          default:
+              aliases:
+                  - clickhouse-${VIRTUAL_HOST}
+          dev-proxy:
       restart: unless-stopped

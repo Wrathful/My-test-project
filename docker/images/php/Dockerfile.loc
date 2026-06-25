@@ -11,6 +11,8 @@ RUN apk add --no-cache \
         libzip \
         libwebp \
         libpq \
+        librdkafka \
+        rabbitmq-c \
         icu \
         gmp \
         patch \
